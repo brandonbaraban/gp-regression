@@ -6,12 +6,12 @@ import matplotlib.pyplot as plt
 
 def main():
     #plot_sample_from_gp()
-    plot_sample_from_gp_given_func(f=lambda x: np.sin(x), num_train=30, num_samples=3)
+    plot_sample_from_gp_given_func(f=lambda x: np.sin(x), num_train=10, num_samples=3)
 
 
 def plot_sample_from_gp(num_samples=1):
     X = np.linspace(-5, 5, num=250)
-    gp = GP(cov_func=SQUARED_EXP)
+    gp = GPR(cov_func=SQUARED_EXP)
     fig, ax = plt.subplots(1)
     mean, std_dev, covariance = gp.predict(X)
     for i in range(num_samples):
@@ -25,7 +25,7 @@ def plot_sample_from_gp_given_func(f=lambda x: x, num_train=5, num_samples=1):
     X = np.linspace(-5, 5, num=250)
     train_X = np.random.choice(X, num_train, replace=False)
     train_Y = [f(x) for x in train_X]
-    gp = GP(cov_func=SQUARED_EXP, initial_dataset=(train_X, train_Y))
+    gp = GPR(cov_func=SQUARED_EXP, initial_dataset=(train_X, train_Y))
     fig, ax = plt.subplots(1)
     mean, std_dev, covariance = gp.predict(X)
     ax.plot(train_X, train_Y, 'b+')
@@ -44,7 +44,7 @@ def plot_confidence(X, mean, std_dev, ax):
 ZERO_MEAN = lambda x: 0
 ZERO_COVARIANCE = lambda x, y: int(x == y)
 SQUARED_EXP = lambda x, y: np.exp(-0.5 * pow(np.linalg.norm(x-y), 2))
-class GP(object):
+class GPR(object):
     """ A representation of a Gaussian Process.  """
 
     def __init__(self, 
