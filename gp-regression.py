@@ -11,7 +11,7 @@ def main():
 
 def plot_sample_from_gp(num_samples=1):
     X = np.linspace(-5, 5, num=250)
-    gp = GPR(cov_func=SQUARED_EXP)
+    gp = GPR(cov_func=SQUARED_EXP(2.0))
     fig, ax = plt.subplots(1)
     mean, std_dev, covariance = gp.predict(X)
     for i in range(num_samples):
@@ -25,14 +25,14 @@ def plot_sample_from_gp_given_func(f=lambda x: x, num_train=5, num_samples=1):
     X = np.linspace(-5, 5, num=250)
     train_X = np.random.choice(X, num_train, replace=False)
     train_Y = [f(x) for x in train_X]
-    gp = GPR(cov_func=SQUARED_EXP, initial_dataset=(train_X, train_Y))
+    gp = GPR(cov_func=SQUARED_EXP(2.0), initial_dataset=(train_X, train_Y))
     fig, ax = plt.subplots(1)
     mean, std_dev, covariance = gp.predict(X)
     ax.plot(train_X, train_Y, 'b+')
     ax.plot(X, mean, 'green')
     for i in range(num_samples):
         Y = gp.sample(X)
-        #ax.plot(X, Y, 'red')
+        ax.plot(X, Y, 'red')
     plot_confidence(X, mean, std_dev, ax)
     plt.show()
 
@@ -43,13 +43,13 @@ def plot_confidence(X, mean, std_dev, ax):
 
 ZERO_MEAN = lambda x: 0
 ZERO_COVARIANCE = lambda x, y: int(x == y)
-SQUARED_EXP = lambda x, y: np.exp(-0.5 * pow(np.linalg.norm(x-y), 2))
+SQUARED_EXP = lambda s: lambda x, y: np.exp(-(1.0 / s) * pow(np.linalg.norm(x-y), 2))
 class GPR(object):
     """ A representation of a Gaussian Process.  """
 
     def __init__(self, 
                 mean_func=ZERO_MEAN, 
-                cov_func=SQUARED_EXP,
+                cov_func=SQUARED_EXP(2.0),
                 initial_dataset=None,
                 noisy=True):
         self.mean_func = mean_func
