@@ -6,16 +6,18 @@ import matplotlib.pyplot as plt
 
 def main():
     #plot_sample_from_gp()
-    plot_sample_from_gp_given_func(num_train=5, num_samples=5)
+    plot_sample_from_gp_given_func(f=lambda x: np.sin(x), num_train=30, num_samples=3)
 
 
 def plot_sample_from_gp(num_samples=1):
     X = np.linspace(-5, 5, num=250)
     gp = GP(cov_func=SQUARED_EXP)
+    fig, ax = plt.subplots(1)
+    mean, std_dev, covariance = gp.predict(X)
     for i in range(num_samples):
-        mean, covariance = gp.predict(X)
-        Y = np.random.multivariate_normal(mean, covariance)
-        plt.plot(X, Y)
+        Y = gp.sample(X)
+        ax.plot(X, Y, 'red')
+    plot_confidence(X, mean, std_dev, ax)
     plt.show()
 
 
@@ -24,26 +26,35 @@ def plot_sample_from_gp_given_func(f=lambda x: x, num_train=5, num_samples=1):
     train_X = np.random.choice(X, num_train, replace=False)
     train_Y = [f(x) for x in train_X]
     gp = GP(cov_func=SQUARED_EXP, initial_dataset=(train_X, train_Y))
+    fig, ax = plt.subplots(1)
+    mean, std_dev, covariance = gp.predict(X)
+    ax.plot(train_X, train_Y, 'b+')
+    ax.plot(X, mean, 'green')
     for i in range(num_samples):
-        mean, covariance = gp.predict(X)
-        Y = np.random.multivariate_normal(mean, covariance)
-        plt.plot(X, Y, 'r')
-    plt.plot(train_X, train_Y, 'b+')
+        Y = gp.sample(X)
+        #ax.plot(X, Y, 'red')
+    plot_confidence(X, mean, std_dev, ax)
     plt.show()
 
 
-DEFAULT_MEAN = lambda x: 0
-DEFAULT_COVARIANCE = lambda x, y: int(x == y)
+def plot_confidence(X, mean, std_dev, ax):
+    ax.fill_between(X, mean - 2 * std_dev, mean + 2 * std_dev, facecolor='pink', alpha=0.4)
+
+
+ZERO_MEAN = lambda x: 0
+ZERO_COVARIANCE = lambda x, y: int(x == y)
 SQUARED_EXP = lambda x, y: np.exp(-0.5 * pow(np.linalg.norm(x-y), 2))
-class GP:
+class GP(object):
     """ A representation of a Gaussian Process.  """
 
     def __init__(self, 
-                mean_func=DEFAULT_MEAN, 
-                cov_func=DEFAULT_COVARIANCE,
-                initial_dataset=None):
+                mean_func=ZERO_MEAN, 
+                cov_func=SQUARED_EXP,
+                initial_dataset=None,
+                noisy=True):
         self.mean_func = mean_func
         self.cov_func = cov_func
+        self.noise_variance = 1e-2 * int(noisy)
         self.cov_mtx = None
         self.dataset = (list(), list())
         if initial_dataset is not None:
@@ -51,64 +62,75 @@ class GP:
             self.update(X, Y)
 
     def update(self, new_X, new_Y):
+        """
+        Updates the GP to reflect the posterior given new training points.
+        """
         X, Y = self.dataset
+        self._compute_cov(new_X)
         X.extend(new_X)
         Y.extend(new_Y)
-        self.cov_mtx = compute_cov_mtx(X, self.cov_func)
+
+    def get_distribution(self, new_X):
+        """ 
+        Returns the mean and covariance of the 
+        multivariate Guassian distribution describing f(new_X).
+        """
+        X, Y = self.dataset
+        cov_mtx = self._compute_cov_mtx(new_X)
+        if self.cov_mtx is None:
+            n = cov_mtx.shape[0]
+            return np.array([self.mean_func(x) for x in new_X]), cov_mtx + self.noise_variance * np.eye(n)
+        n = self.cov_mtx.shape[0]
+        cov_ext = self._compute_cov_ext(new_X)
+        cov_inv = np.linalg.inv(self.cov_mtx + self.noise_variance * np.eye(n))
+        return np.array(cov_ext @ cov_inv @ np.array(Y).T), \
+                np.array(cov_mtx - cov_ext @ cov_inv @ cov_ext.T)
 
     def predict(self, X):
-        """ 
-        Returns the mean and variance of the 
-        multivariate Guassian distribution describing f(X).
         """
-        old_X, old_Y = self.dataset
-        cov_mtx = compute_cov_mtx(X, self.cov_func)
-        if len(old_X) == 0:
-            return [self.mean_func(x) for x in X], cov_mtx
-        cov_rows = compute_cov_rows(X, old_X, self.cov_func)
-        cov_cols = compute_cov_cols(X, old_X, self.cov_func)
-        cov_inv = np.linalg.inv(self.cov_mtx)
-        return cov_rows @ cov_inv @ np.array(old_Y).T, \
-                cov_mtx - cov_rows @ cov_inv @ cov_cols
+        Returns the MAP estimate of f(X).
+        """
+        mean, covariance = self.get_distribution(X)
+        std_dev = np.zeros(mean.shape)
+        for i in range(len(X)):
+            std_dev[i] = np.sqrt(np.abs(self.get_distribution([X[i]])[1].item(0)))
+        return mean, std_dev, covariance
 
+    def sample(self, X):
+        """
+        Returns a sampled function f*(X).
+        """
+        mean, covariance = self.get_distribution(X)
+        return np.random.multivariate_normal(mean, covariance)
 
-def compute_cov(new_X, X, old_cov, cov_func):
-    cov_mtx = compute_cov_mtx(new_X, cov_func)
-    if old_cov is None:
+    def _compute_cov(self, new_X):
+        new_cov_mtx = self._compute_cov_mtx(new_X)
+        if self.cov_mtx is None:
+            self.cov_mtx = new_cov_mtx
+        else:
+            n = self.cov_mtx.shape[0]
+            cov_ext = self._compute_cov_ext(new_X)
+            self.cov_mtx = np.hstack((np.vstack((self.cov_mtx, cov_ext)), np.vstack((cov_ext.T, cov_mtx))))
+    
+    def _compute_cov_ext(self, new_X):
+        X, Y = self.dataset
+        n = len(X)
+        new_n = len(new_X)
+        cov_ext = np.zeros((new_n, n))
+        for i in range(new_n):
+            for j in range(n):
+                cov_ext[i, j] = self.cov_func(new_X[i], X[j])
+        return cov_ext
+    
+    def _compute_cov_mtx(self, X):
+        n = len(X)
+        cov_mtx = np.zeros((n, n)) 
+        for i in range(n):
+            for j in range(n):
+                cov = self.cov_func(X[i], X[j])
+                cov_mtx[i, j] = cov
+                cov_mtx[j, i] = cov
         return cov_mtx
-    new_rows = compute_cov_rows(new_X, X, cov_func)
-    new_cols = compute_cov_cols(new_X, X, cov_func)
-    return np.hstack((np.vstack((old_cov, new_rows)), np.vstack((new_cols, cov_mtx))))
-
-
-def compute_cov_rows(new_X, old_X, cov_func):
-    new_rows = []
-    for new_x in new_X:
-        new_row = []
-        for old_x in old_X:
-            new_row.append(cov_func(old_x, new_x))
-        new_rows.append(new_row)
-    return np.array(new_rows)
-
-
-def compute_cov_cols(new_X, old_X, cov_func):
-    new_cols = []
-    for new_x in new_X:
-        new_col = []
-        for old_x in old_X:
-            new_col.append(cov_func(new_x, old_x))
-        new_cols.append(new_col)
-    return np.array(new_cols).T
-
-
-def compute_cov_mtx(X, cov_func):
-    cov_mtx = []
-    for x in X:
-        row = []
-        for y in X:
-            row.append(cov_func(x, y))
-        cov_mtx.append(row)
-    return np.array(cov_mtx)
 
 
 if __name__ == "__main__":
