@@ -6,34 +6,33 @@ import matplotlib.pyplot as plt
 
 def main():
     #plot_sample_from_gp()
-    plot_sample_from_gp_given_func(f=lambda x: np.sin(x), num_train=10, num_samples=3)
+    plot_MAP_from_gp_given_func(f=lambda x: np.sin(x), num_train=5)
 
 
 def plot_sample_from_gp(num_samples=1):
     X = np.linspace(-5, 5, num=250)
-    gp = GPR(cov_func=SQUARED_EXP(2.0))
+    gp = GPR()
     fig, ax = plt.subplots(1)
-    mean, std_dev, covariance = gp.predict(X)
+    mean, covariance = gp.predict(X)
     for i in range(num_samples):
         Y = gp.sample(X)
         ax.plot(X, Y, 'red')
+    std_dev = np.diagonal(covariance)
     plot_confidence(X, mean, std_dev, ax)
     plt.show()
 
 
-def plot_sample_from_gp_given_func(f=lambda x: x, num_train=5, num_samples=1):
+def plot_MAP_from_gp_given_func(f=lambda x: x, num_train=5):
     X = np.linspace(-5, 5, num=250)
     train_X = np.random.choice(X, num_train, replace=False)
     train_Y = [f(x) for x in train_X]
-    gp = GPR(cov_func=SQUARED_EXP(2.0), initial_dataset=(train_X, train_Y))
+    gp = GPR(initial_dataset=(train_X, train_Y))
     fig, ax = plt.subplots(1)
-    mean, std_dev, covariance = gp.predict(X)
+    mean, covariance = gp.predict(X)
     ax.plot(train_X, train_Y, 'b+')
     ax.plot(X, mean, 'green')
-    for i in range(num_samples):
-        Y = gp.sample(X)
-        ax.plot(X, Y, 'red')
-    plot_confidence(X, mean, std_dev, ax)
+    std_devs = np.diagonal(covariance)
+    plot_confidence(X, mean, std_devs, ax)
     plt.show()
 
 
@@ -43,18 +42,18 @@ def plot_confidence(X, mean, std_dev, ax):
 
 ZERO_MEAN = lambda x: 0
 ZERO_COVARIANCE = lambda x, y: int(x == y)
-SQUARED_EXP = lambda s: lambda x, y: np.exp(-(1.0 / s) * pow(np.linalg.norm(x-y), 2))
+SQUARED_EXP = lambda l_scale, sig_var: lambda x, y: sig_var * np.exp(-(1 / (2 * pow(l_scale, 2))) * pow(np.linalg.norm(x - y), 2))
 class GPR(object):
     """ A representation of a Gaussian Process.  """
 
     def __init__(self, 
                 mean_func=ZERO_MEAN, 
-                cov_func=SQUARED_EXP(2.0),
+                cov_func=SQUARED_EXP(1, 1),
                 initial_dataset=None,
-                noisy=True):
+                noise_variance=1e-2):
         self.mean_func = mean_func
         self.cov_func = cov_func
-        self.noise_variance = 1e-2 * int(noisy)
+        self.noise_var = noise_variance
         self.cov_mtx = None
         self.dataset = (list(), list())
         if initial_dataset is not None:
@@ -79,22 +78,19 @@ class GPR(object):
         cov_mtx = self._compute_cov_mtx(new_X)
         if self.cov_mtx is None:
             n = cov_mtx.shape[0]
-            return np.array([self.mean_func(x) for x in new_X]), cov_mtx + self.noise_variance * np.eye(n)
+            return np.array([self.mean_func(x) for x in new_X]), cov_mtx + self.noise_var * np.eye(n)
         n = self.cov_mtx.shape[0]
         cov_ext = self._compute_cov_ext(new_X)
-        cov_inv = np.linalg.inv(self.cov_mtx + self.noise_variance * np.eye(n))
+        cov_inv = np.linalg.inv(self.cov_mtx + self.noise_var * np.eye(n))
         return np.array(cov_ext @ cov_inv @ np.array(Y).T), \
                 np.array(cov_mtx - cov_ext @ cov_inv @ cov_ext.T)
 
     def predict(self, X):
         """
-        Returns the MAP estimate of f(X).
+        Returns the MAP estimate of f(X) and associated covariance matrix.
         """
         mean, covariance = self.get_distribution(X)
-        std_dev = np.zeros(mean.shape)
-        for i in range(len(X)):
-            std_dev[i] = np.sqrt(np.abs(self.get_distribution([X[i]])[1].item(0)))
-        return mean, std_dev, covariance
+        return mean, covariance
 
     def sample(self, X):
         """
