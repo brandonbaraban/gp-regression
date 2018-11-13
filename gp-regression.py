@@ -126,7 +126,7 @@ class GPR(object):
         n = len(X)
         cov_mtx = np.zeros((n, n)) 
         for i in range(n):
-            for j in range(n):
+            for j in range(i + 1):
                 cov = self.cov_func(X[i], X[j])
                 cov_mtx[i, j] = cov
                 cov_mtx[j, i] = cov
