@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 def main():
     #plot_sample_from_gp()
-    plot_MAP_from_gp_given_func(f=lambda x: np.sin(x), num_train=5)
+    plot_MAP_from_gp_given_func(f=lambda x: np.sin(x), num_train=25)
 
 
 def plot_sample_from_gp(num_samples=1):
@@ -44,7 +44,7 @@ ZERO_MEAN = lambda x: 0
 ZERO_COVARIANCE = lambda x, y: int(x == y)
 SQUARED_EXP = lambda l_scale, sig_var: lambda x, y: sig_var * np.exp(-(1 / (2 * pow(l_scale, 2))) * pow(np.linalg.norm(x - y), 2))
 class GPR(object):
-    """ A representation of a Gaussian Process.  """
+    """ A representation of a Gaussian process for regression purposes.  """
 
     def __init__(self, 
                 mean_func=ZERO_MEAN, 
@@ -79,9 +79,8 @@ class GPR(object):
         if self.cov_mtx is None:
             n = cov_mtx.shape[0]
             return np.array([self.mean_func(x) for x in new_X]), cov_mtx + self.noise_var * np.eye(n)
-        n = self.cov_mtx.shape[0]
         cov_ext = self._compute_cov_ext(new_X)
-        cov_inv = np.linalg.inv(self.cov_mtx + self.noise_var * np.eye(n))
+        cov_inv = self._compute_cov_inv()
         return np.array(cov_ext @ cov_inv @ np.array(Y).T), \
                 np.array(cov_mtx - cov_ext @ cov_inv @ cov_ext.T)
 
@@ -98,6 +97,9 @@ class GPR(object):
         """
         mean, covariance = self.get_distribution(X)
         return np.random.multivariate_normal(mean, covariance)
+
+    def get_dataset(self):
+        return np.array(self.dataset[0]), np.array(self.dataset[1])
 
     def _compute_cov(self, new_X):
         new_cov_mtx = self._compute_cov_mtx(new_X)
@@ -127,6 +129,15 @@ class GPR(object):
                 cov_mtx[i, j] = cov
                 cov_mtx[j, i] = cov
         return cov_mtx
+
+    def _compute_noisy_cov(self):
+        n = self.cov_mtx.shape[0]
+        return self.cov_mtx + np.random.normal(0.0, np.sqrt(self.noise_var)) * np.eye(n)
+
+    def _compute_cov_inv(self):
+        # TODO: do something smarter with cholesky decomposition
+        return np.linalg.inv(self._compute_noisy_cov())
+
 
 
 if __name__ == "__main__":
