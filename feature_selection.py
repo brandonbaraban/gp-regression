@@ -8,7 +8,7 @@ def main():
     pass
 
 
-def forward_selection(D):
+def forward_selection(D, threshold=1e-2):
     """
     Greedy forward selection algorithm on dataset D=(X,Y).
     """
@@ -23,7 +23,6 @@ def forward_selection(D):
                 index = [j for j in range(m) if j in selected_features.union({i})]
                 new_X = X[:, index]
                 stat_significance[i] = np.exp(compute_log_ml(GPR(initial_dataset=(new_X, Y))))
-        # TODO: set threshold
         anything_significant = np.any(stat_significant > threshold)
         if not anything_significant:
             break
@@ -61,7 +60,7 @@ def sq_exp_ard_grad(gp):
     return grad
 
 
-def ard(D):
+def ard(D, threshold=1e-2, max_updates=100):
     """
     Automatic relevance determination algorithm on dataset D=(X,Y).
     """
@@ -69,11 +68,12 @@ def ard(D):
     l = np.ones(n)
     gp = GPR(cov_func=sq_exp_ard(np.diag(l)), initial_dataset=D, noise_variance=0)
     grad = compute_log_ml_grad(gp, sq_exp_ard_grad)
-    # TODO: set tolerance and max_updates
-    while np.sum(np.abs(grad)) > tolerance or num_updates < max_updates:
+    num_updates = 0
+    while np.sum(np.abs(grad)) > threshold or num_updates < max_updates:
         l -= learning_rate * grad
         gp = GPR(cov_func=sq_exp_ard(np.diag(l)), initial_dataset=D, noise_variance=0)
         grad = compute_log_ml_grad(gp, sq_exp_ard_grad)
+        num_updates += 1
     return gp, l
 
 
