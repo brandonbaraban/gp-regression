@@ -19,6 +19,7 @@ def plot_gpr_given_func(f=lambda x: np.sin(x), num_train=5):
     ax.plot(X, y, 'b+')
     mean, variance, log_ml = gpr(X, y, SQUARED_EXP(1, 1), 1e-2, test_X)
     ax.plot(test_X, mean, 'red')
+    ax.plot(test_X, f(test_X), 'green')
     plot_confidence(test_X, mean, np.sqrt(variance), ax)
     plt.show()
 
@@ -62,7 +63,7 @@ def compute_covariance(X, k):
     covariance = np.zeros((n, n))
     for i in range(n):
         for j in range(i + 1):
-            cov = k(X[i], X[j])
+            cov = k(X[i:i+1], X[j:j+1])
             covariance[i, j] = cov
             covariance[j, i] = cov
     return covariance
