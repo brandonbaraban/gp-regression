@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 
 def main():
-    plot_gpr_given_func(num_train=20)
+    plot_gpr_given_func(num_train=10)
 
 
 SQUARED_EXP = lambda l_scale, sigma: \
@@ -45,8 +45,12 @@ def gpr(inputs, targets, covariance_function, noise_level, test_inputs):
         v = np.linalg.solve(L, test_cov)
         mean[i] = test_cov.T @ alpha
         variance[i] = k(test_input, test_input) - v.T @ v
-    log_marginal_likelihood = -0.5 * y.T @ alpha - np.sum(np.log(np.diag(L))) - 0.5 * n * np.log(2 * np.pi)
+    log_marginal_likelihood = log_ml_helper(n, y, L, alpha)
     return mean, variance, log_marginal_likelihood
+
+
+def log_ml_helper(n, y, L, alpha):
+    return -0.5 * y.T @ alpha - np.sum(np.log(np.diag(L))) - 0.5 * n * np.log(2 * np.pi)
 
 
 def compute_covariance(X, k):
