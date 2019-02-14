@@ -12,7 +12,7 @@ def rbf(l_scale, sigma):
     c = -1.0 / (2.0 * np.power(l_scale, 2))
     def f(x, y):
         x_ = x - y
-        return sigma * np.exp(c * (x_.T @ x_))
+        return sigma * np.exp(c * (x_ @ x_.T))
     return f
 
 
