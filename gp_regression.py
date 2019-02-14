@@ -12,17 +12,19 @@ def rbf(l_scale, sigma):
     c = -1.0 / (2.0 * np.power(l_scale, 2))
     def f(x, y):
         x_ = x - y
-        return sigma * np.exp(c * (x_.T @ x))
+        return sigma * np.exp(c * (x_.T @ x_))
     return f
 
 
 def plot_gpr_given_func(f=lambda x: np.sin(x), num_train=5):
     test_X = np.linspace(-5, 5, num=250) # 250 is arbitrary
-    X = np.random.choice(test_X, num_train, replace=False)
+    X = np.random.choice(test_X, num_train, replace=False).reshape((-1, 1))
+    test_X = test_X.reshape((-1, 1))
     y = f(X)
     fig, ax = plt.subplots(1)
     ax.plot(X, y, 'b+')
     mean, variance, log_ml = gpr(X, y, rbf(1, 1), 1e-2, test_X)
+    test_X = test_X.flatten()
     ax.plot(test_X, mean, 'red')
     ax.plot(test_X, f(test_X), 'green')
     plot_confidence(test_X, mean, np.sqrt(variance), ax)
