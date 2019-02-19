@@ -56,7 +56,7 @@ def gpr(inputs, targets, covariance_function, noise_level, test_inputs):
 
 
 def log_ml_helper(n, y, L, alpha):
-    return -0.5 * y.T @ alpha - np.sum(np.log(np.diag(L))) - 0.5 * n * np.log(2 * np.pi)
+    return np.asscalar(-0.5 * y.T @ alpha - np.sum(np.log(np.diag(L))) - 0.5 * n * np.log(2 * np.pi))
 
 
 def compute_covariance(X, k):
