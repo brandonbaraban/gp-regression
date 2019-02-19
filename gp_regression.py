@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 
 def main():
-    plot_gpr_given_func(num_train=10)
+    plot_gpr_given_func()
 
 
 def rbf(l_scale, sigma):
@@ -22,10 +22,12 @@ def plot_gpr_given_func(f=lambda x: np.sin(x), num_train=5):
     y = f(X)
     fig, ax = plt.subplots(1)
     ax.plot(X, y, 'b+')
-    mean, variance, log_ml = gpr(X, y.T, rbf(1, 1), 1e-2, test_X.reshape((1, -1)))
+    noise_level = 0.0
+    mean, variance, log_ml = gpr(X, y.T, rbf(1, 1), noise_level, test_X.reshape((1, -1)))
     ax.plot(test_X, mean, 'red') # plot MAP estimate of f
     ax.plot(test_X, f(test_X), 'green') # plot f
-    plot_confidence(test_X, mean, np.sqrt(variance), ax)
+    v_noise = 1e-12 # add to variance just to account for floating point error
+    plot_confidence(test_X, mean, np.sqrt(variance + v_noise), ax)
     plt.show()
 
 
