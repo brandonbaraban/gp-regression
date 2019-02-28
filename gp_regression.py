@@ -10,8 +10,8 @@ from sklearn.gaussian_process.kernels \
 
 
 def main():
-    #plot_gpr_given_func()
-    plot_gpr_mauna_loa()
+    plot_gpr_given_func()
+    #plot_gpr_mauna_loa()
 
 
 def load_mauna_loa_atmospheric_co2():
@@ -117,14 +117,16 @@ def gpr(inputs, targets, covariance_function, noise_level, test_inputs):
     X, y, k, sigma_n, x = inputs, targets, covariance_function, noise_level, test_inputs
     K = compute_covariance(X, k)
     n = K.shape[0]
-    L = np.linalg.cholesky(K + sigma_n * np.eye(n))
-    alpha = np.linalg.solve(L.T, np.linalg.solve(L, y))
+    L = linalg.cholesky(K + sigma_n * np.eye(n), lower=True, check_finite=False)
+    alpha = linalg.solve_triangular(L.T, 
+                                    linalg.solve_triangular(L, y, lower=True, check_finite=False), 
+                                    check_finite=False)
     m = test_inputs.size
     mean, variance = np.zeros(m), np.zeros(m)
     for i in range(m):
         test_input = test_inputs[:, i]
         test_cov = np.array([k(test_input, inputs[:, j]) for j in range(n)])
-        v = np.linalg.solve(L, test_cov)
+        v = linalg.solve_triangular(L, test_cov, lower=True, check_finite=False)
         mean[i] = test_cov.T @ alpha
         variance[i] = k(test_input, test_input) - v.T @ v
     log_marginal_likelihood = log_ml_helper(n, y, L, alpha)
