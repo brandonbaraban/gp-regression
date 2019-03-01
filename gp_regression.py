@@ -5,9 +5,6 @@ import matplotlib.pyplot as plt
 from scipy.linalg import cholesky, cho_solve, solve_triangular
 from scipy.spatial.distance import pdist, cdist, squareform
 from sklearn.datasets import fetch_openml
-from sklearn.gaussian_process import GaussianProcessRegressor
-from sklearn.gaussian_process.kernels \
-    import RBF, WhiteKernel, RationalQuadratic, ExpSineSquared
 
 
 def main():
