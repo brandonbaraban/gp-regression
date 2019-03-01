@@ -104,7 +104,7 @@ def gpr(inputs, targets, covariance_function, noise_level, test_inputs, normaliz
         y -= y_mean
     K = k(X)
     L = cholesky(K + sigma_n * np.eye(K.shape[0]), lower=True)
-    alpha = solve_triangular(L.T, solve_triangular(L, y, lower=True)) 
+    alpha = cho_solve((L, True), y)
     test_cov = k(X, Xt)
     v = solve_triangular(L, test_cov, lower=True)
     mean = np.zeros(Xt.shape[0]) + np.reshape(test_cov.T @ alpha, (-1,)) + y_mean
