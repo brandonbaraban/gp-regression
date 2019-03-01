@@ -2,7 +2,8 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy import linalg
+from scipy.linalg import cholesky, cho_solve, solve_triangular
+from scipy.spatial.distance import pdist, cdist, squareform
 from sklearn.datasets import fetch_openml
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels \
@@ -83,21 +84,27 @@ def plot_gpr_mauna_loa():
 
 
 def rbf(l_scale, sigma):
-    c = -1.0 / (2.0 * np.power(l_scale, 2))
-    def f(x, y):
-        x_ = x - y
-        return np.power(sigma, 2) * np.exp(c * (x_.T @ x_))
+    def f(X, Y=None):
+        if Y is None: # X with itself
+            sqeuclidean = pdist(X / (l_scale ** 2), metric='sqeuclidean')
+            K = (sigma ** 2) * np.exp(-0.5 * sqeuclidean)
+            K = squareform(K) # convert from condensed to square
+            np.fill_diagonal(K, 1)
+        else: # X with Y
+            sqeuclidean = cdist(X / (l_scale ** 2), Y / (l_scale ** 2), metric='sqeuclidean')
+            K = (sigma ** 2) * np.exp(-0.5 * sqeuclidean)
+        return K
     return f
 
 
 def plot_gpr_given_func(f=lambda x: np.sin(x), num_train=5):
     test_X = np.linspace(-5, 5, num=250) # 250 is arbitrary
-    X = np.random.choice(test_X, num_train, replace=False).reshape((1, -1))
+    X = np.random.choice(test_X, num_train, replace=False).reshape((-1, 1))
     y = f(X)
     fig, ax = plt.subplots(1)
     ax.plot(X, y, 'b+')
     noise_level = 0.0
-    mean, variance, log_ml = gpr(X, y.T, rbf(l_scale=1, sigma=1), noise_level, test_X.reshape((1, -1)))
+    mean, variance, log_ml = gpr(X, y, rbf(l_scale=1, sigma=1), noise_level, test_X.reshape((-1, 1)))
     ax.plot(test_X, mean, 'red') # plot MAP estimate of f
     ax.plot(test_X, f(test_X), 'green') # plot f
     v_noise = 1e-12 # add to variance just to account for floating point error
@@ -109,47 +116,29 @@ def plot_confidence(X, mean, std_dev, ax):
     ax.fill_between(X, mean - 2 * std_dev, mean + 2 * std_dev, facecolor='pink', alpha=0.4)
 
 
-def gpr(inputs, targets, covariance_function, noise_level, test_inputs):
+def gpr(inputs, targets, covariance_function, noise_level, test_inputs, normalize_y=False):
     """
     Implementation of Gaussian Process Regression (Algorithm 2.1 from Rasmussen).
     Expects all vector inputs as numpy arrays.
     """
-    X, y, k, sigma_n, x = inputs, targets, covariance_function, noise_level, test_inputs
-    K = compute_covariance(X, k)
-    n = K.shape[0]
-    L = linalg.cholesky(K + sigma_n * np.eye(n), lower=True, check_finite=False)
-    alpha = linalg.solve_triangular(L.T, 
-                                    linalg.solve_triangular(L, y, lower=True, check_finite=False), 
-                                    check_finite=False)
-    m = test_inputs.size
-    mean, variance = np.zeros(m), np.zeros(m)
-    for i in range(m):
-        test_input = test_inputs[:, i]
-        test_cov = np.array([k(test_input, inputs[:, j]) for j in range(n)])
-        v = linalg.solve_triangular(L, test_cov, lower=True, check_finite=False)
-        mean[i] = test_cov.T @ alpha
-        variance[i] = k(test_input, test_input) - v.T @ v
-    log_marginal_likelihood = log_ml_helper(n, y, L, alpha)
+    X, y, k, sigma_n, Xt = inputs, targets, covariance_function, noise_level, test_inputs
+    y_mean = 0.0
+    if normalize_y: # make y zero-mean
+        y_mean += np.mean(y, axis=0)
+        y -= y_mean
+    K = k(X)
+    L = cholesky(K + sigma_n * np.eye(K.shape[0]), lower=True)
+    alpha = solve_triangular(L.T, solve_triangular(L, y, lower=True)) 
+    test_cov = k(X, Xt)
+    v = solve_triangular(L, test_cov, lower=True)
+    mean = np.zeros(Xt.shape[0]) + np.reshape(test_cov.T @ alpha, (-1,)) + y_mean
+    variance = np.ones(Xt.shape[0]) - np.sum(np.square(v), axis=0)
+    log_marginal_likelihood = log_ml_helper(K.shape[0], y, L, alpha)
     return mean, variance, log_marginal_likelihood
 
 
 def log_ml_helper(n, y, L, alpha):
     return np.asscalar(-0.5 * y.T @ alpha - np.sum(np.log(np.diag(L))) - 0.5 * n * np.log(2 * np.pi))
-
-
-def compute_covariance(X, k):
-    """
-    Compute covariance matrix for inputs X.
-    Assumes covariance function k is symmetric.
-    """
-    n = X.shape[1]
-    covariance = np.zeros((n, n))
-    for i in range(n):
-        for j in range(i + 1):
-            cov = k(X[:, i:i+1], X[:, j:j+1])
-            covariance[i, j] = cov
-            covariance[j, i] = cov
-    return covariance
 
 
 if __name__ == "__main__":
