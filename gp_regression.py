@@ -73,18 +73,18 @@ def plot_gpr_given_func(f=lambda x: np.sin(x), num_train=5):
     predict_and_plot(X, y, rbf(l_scale=1), noise_level, test_X, f)
 
 
-def predict_and_plot(X, y, k, noise_level, test_X, f=None):
+def predict_and_plot(X, y, k, sigma_n, Xt, f=None):
     fig, ax = plt.subplots(1)
     if f is None:
         ax.plot(X, y, 'green') # plot f
     else:
         ax.plot(X, y, 'b+')
-        ax.plot(test_X, f(test_X), 'green') # plot f
-    mean, variance, log_ml = gpr(X, y, k, noise_level, test_X.reshape((-1, 1)), True)
+        ax.plot(Xt, f(Xt), 'green') # plot f
+    mean, variance, log_ml = gpr(X, y, k, sigma_n, Xt.reshape((-1, 1)), normalize_y=True)
     print('log_ml', log_ml)
-    ax.plot(test_X, mean, 'red') # plot MAP estimate of f
+    ax.plot(Xt, mean, 'red') # plot MAP estimate of f
     v_noise = 1e-12 # add to variance just to account for floating point error
-    plot_confidence(test_X.flatten(), mean, np.sqrt(variance + v_noise), ax)
+    plot_confidence(Xt.flatten(), mean, np.sqrt(variance + v_noise), ax)
     plt.show()
 
 
@@ -92,12 +92,11 @@ def plot_confidence(X, mean, std_dev, ax):
     ax.fill_between(X, mean - 2 * std_dev, mean + 2 * std_dev, facecolor='pink', alpha=0.4)
 
 
-def gpr(inputs, targets, covariance_function, noise_level, test_inputs, normalize_y=False):
+def gpr(X, y, k, sigma_n, Xt, normalize_y=False):
     """
     Implementation of Gaussian Process Regression (Algorithm 2.1 from Rasmussen).
     Expects all vector inputs as numpy arrays.
     """
-    X, y, k, sigma_n, Xt = inputs, targets, covariance_function, noise_level, test_inputs
     y_mean = 0.0
     if normalize_y: # make y zero-mean
         y_mean += np.mean(y, axis=0)
