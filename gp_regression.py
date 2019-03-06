@@ -48,18 +48,18 @@ def plot_gpr_mauna_loa():
     X, y = load_mauna_loa_atmospheric_co2()
     X_ = np.linspace(X.min(), X.max() + 30, 1000)[:, np.newaxis]
     noise_level = 5
-    predict_and_plot(X, np.copy(y), rbf(l_scale=5), noise_level, X_)
+    predict_and_plot(X, y, rbf(l_scale=25), noise_level, X_)
 
 
 def rbf(l_scale):
     def f(X, Y=None):
         if Y is None: # X with itself
-            sqeuclidean = pdist(X / (l_scale ** 2), metric='sqeuclidean')
+            sqeuclidean = pdist(X / l_scale, metric='sqeuclidean')
             K = np.exp(-0.5 * sqeuclidean)
             K = squareform(K) # convert from condensed to square
             np.fill_diagonal(K, 1)
         else: # X with Y
-            sqeuclidean = cdist(X / (l_scale ** 2), Y / (l_scale ** 2), metric='sqeuclidean')
+            sqeuclidean = cdist(X / l_scale, Y / l_scale, metric='sqeuclidean')
             K = np.exp(-0.5 * sqeuclidean)
         return K
     return f
@@ -106,9 +106,10 @@ def gpr(X, y, k, sigma_n, Xt, normalize_y=False):
     alpha = cho_solve((L, True), y)
     test_cov = k(X, Xt)
     v = solve_triangular(L, test_cov, lower=True)
-    mean = np.zeros(Xt.shape[0]) + np.reshape(test_cov.T @ alpha, (-1,)) + y_mean
-    variance = np.ones(Xt.shape[0]) - np.sum(np.square(v), axis=0)
+    mean = np.reshape(test_cov.T @ alpha, (-1,)) + y_mean
+    variance = np.diag(k(Xt, Xt)) - np.sum(np.square(v), axis=0)
     log_marginal_likelihood = log_ml_helper(K.shape[0], y, L, alpha)
+    y += y_mean
     return mean, variance, log_marginal_likelihood
 
 
