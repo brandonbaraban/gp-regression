@@ -142,9 +142,6 @@ def gpr(X, y, Xt, gpr_params):
 
 
 def lml_helper(n, y, L, alpha):
-    datafit = -0.5 * y.T @ alpha
-    complexity = -np.sum(np.log(np.diag(L)))
-    normalization = -0.5 * n * np.log(2 * np.pi)
     return np.asscalar(-0.5 * y.T @ alpha - np.sum(np.log(np.diag(L))) - 0.5 * n * np.log(2 * np.pi))
 
 
