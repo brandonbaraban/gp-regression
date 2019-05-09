@@ -15,9 +15,9 @@ default_rbf = rbf(l_scale=1)
 
 # functions
 simple_sin = lambda x: np.sin(x[:, 0:1])
-less_simple_sin = lambda x: 1 * np.sin(x[:, 0:1]) + \
-                            1 * np.sin(x[:, 1:2]) +  \
-                            1 * np.sin(x[:, 2:3])
+less_simple_sin = lambda x: 9 * np.sin(x[:, 0:1]) + \
+                            5 * np.sin(x[:, 1:2]) +  \
+                            2 * np.sin(x[:, 2:3])
 
 
 # defaults
@@ -29,7 +29,7 @@ default_max_iters = 100
 
 
 def main():
-    pass
+    # pass
     # print('timing as function of n...')
     # time_gfs_ard_n(f=simple_sin,
     #                  n_features=2,
@@ -53,20 +53,20 @@ def main():
     #                          'init_min': 25, 
     #                          'init_max': 25,
     #                          'max_iters': 10},
-    #                  n_max=1000)
-    # test_gfs_ard_on_f(f=less_simple_sin,
-    #                  n_train=10, 
-    #                  n_val=20,
-    #                  n_test=100,
-    #                  n_features=5,
-    #                  init_min=-np.pi,
-    #                  init_max=np.pi,
-    #                  params={'eta': 1e-6,
-    #                          'sigma_n': 1e-6,
-    #                          'normalize_y': False,
-    #                          'init_min': 25, 
-    #                          'init_max': 25,
-    #                          'max_iters': 100})
+    #                  n_max=100)
+    test_gfs_ard_on_f(f=less_simple_sin,
+                     n_train=100, 
+                     n_val=20,
+                     n_test=100,
+                     n_features=6,
+                     init_min=-np.pi,
+                     init_max=np.pi,
+                     params={'eta': 1e-6,
+                             'sigma_n': 1e-6,
+                             'normalize_y': False,
+                             'init_min': 25, 
+                             'init_max': 25,
+                             'max_iters': 20})
     # test_boston_house_prices(n_train=300,
     #                           params={'eta': 1e-8,
     #                                   'sigma_n': 1e-6,
@@ -91,7 +91,7 @@ def time_gfs_ard_n(f, n_features, init_min, init_max, params, n_max):
     f, ax1 = plt.subplots(1)
     ax1.plot(gfs_times, 'r', label='gfs')
     ax1.plot(ard_times, 'b', label='ard')
-    ax1.set_xlabel('n_train')
+    ax1.set_xlabel('number of training points')
     ax1.set_ylabel('runtime')
     ax1.legend()
     plt.tight_layout()
@@ -110,7 +110,7 @@ def time_gfs_ard_d(f, n_train, init_min, init_max, params, n_max):
     f, ax1 = plt.subplots(1)
     ax1.plot(gfs_times, 'r', label='gfs')
     ax1.plot(ard_times, 'b', label='ard')
-    ax1.set_xlabel('n_features')
+    ax1.set_xlabel('number of features')
     ax1.set_ylabel('runtime')
     ax1.legend()
     plt.tight_layout()
@@ -158,8 +158,8 @@ def gfs_vs_ard(data_X, data_y, params):
                                      params.get('sigma_n', default_sigma_n))
     print('gfs sorted features', gfs_features)
     gfs_mse, ard_mse = features_vs_mse(gfs_features, ard_features, data_X, data_y, params)
-    f, ((ax1, ax2), (ax3, ax4), (ax5, ax6)) = plt.subplots(3, 2)
-    ax1.plot(gfs_mse, 'r', label='gfs')
+    f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
+    ax1.plot(gfs_mse, 'r+', label='gfs')
     ax1.plot(ard_mse, 'b', label='ard')
     ax1.set_xlabel('number of features used')
     ax1.set_ylabel('mean squared error')
@@ -179,12 +179,12 @@ def gfs_vs_ard(data_X, data_y, params):
     ax4.set_xlabel('time')
     ax4.set_ylabel('log_ml')
     ax4.legend()
-    ax5.plot(datafit, 'r', label='datafit')
-    ax5.set_xlabel('time')
-    ax5.set_ylabel('datafit')
-    ax6.plot(complexity, 'b', label='complexity')
-    ax6.set_xlabel('time')
-    ax6.set_ylabel('complexity')
+    # ax5.plot(datafit, 'r', label='datafit')
+    # ax5.set_xlabel('time')
+    # ax5.set_ylabel('datafit')
+    # ax6.plot(complexity, 'b', label='complexity')
+    # ax6.set_xlabel('time')
+    # ax6.set_ylabel('complexity')
     plt.tight_layout()
     plt.show()
 

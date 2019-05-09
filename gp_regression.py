@@ -9,7 +9,7 @@ from sklearn.datasets import fetch_openml
 
 def main():
     plot_gpr_on_f(f=lambda x: np.sin(x), n_train=5, x_min=-np.pi, x_max=np.pi)
-    plot_gpr_mauna_loa()
+    # plot_gpr_mauna_loa()
 
 
 # kernels
@@ -44,7 +44,7 @@ def plot_gpr_on_f(f, n_train, x_min, x_max):
     y = f(X)
     noise_level = 0.0
     gpr_params = {'kernel': rbf(l_scale=1),
-                  'sigma_n': 0,
+                  'sigma_n': 1e-6,
                   'normalize_y': -x_min != x_max}
     predict_and_plot(X, y, test_X, gpr_params, f)
 
