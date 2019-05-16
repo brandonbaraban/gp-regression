@@ -29,7 +29,7 @@ default_max_iters = 100
 
 
 def main():
-    # pass
+    pass
     # print('timing as function of n...')
     # time_gfs_ard_n(f=simple_sin,
     #                  n_features=2,
@@ -54,19 +54,19 @@ def main():
     #                          'init_max': 25,
     #                          'max_iters': 10},
     #                  n_max=100)
-    test_gfs_ard_on_f(f=less_simple_sin,
-                     n_train=100, 
-                     n_val=20,
-                     n_test=100,
-                     n_features=6,
-                     init_min=-np.pi,
-                     init_max=np.pi,
-                     params={'eta': 1e-6,
-                             'sigma_n': 1e-6,
-                             'normalize_y': False,
-                             'init_min': 25, 
-                             'init_max': 25,
-                             'max_iters': 20})
+    # test_gfs_ard_on_f(f=less_simple_sin,
+    #                  n_train=100, 
+    #                  n_val=20,
+    #                  n_test=100,
+    #                  n_features=6,
+    #                  init_min=-np.pi,
+    #                  init_max=np.pi,
+    #                  params={'eta': 1e-6,
+    #                          'sigma_n': 1e-6,
+    #                          'normalize_y': False,
+    #                          'init_min': 25, 
+    #                          'init_max': 25,
+    #                          'max_iters': 20})
     # test_boston_house_prices(n_train=300,
     #                           params={'eta': 1e-8,
     #                                   'sigma_n': 1e-6,
@@ -91,7 +91,7 @@ def time_gfs_ard_n(f, n_features, init_min, init_max, params, n_max):
     f, ax1 = plt.subplots(1)
     ax1.plot(gfs_times, 'r', label='gfs')
     ax1.plot(ard_times, 'b', label='ard')
-    ax1.set_xlabel('number of training points')
+    ax1.set_xlabel('number of training points (n)')
     ax1.set_ylabel('runtime')
     ax1.legend()
     plt.tight_layout()
@@ -110,7 +110,7 @@ def time_gfs_ard_d(f, n_train, init_min, init_max, params, n_max):
     f, ax1 = plt.subplots(1)
     ax1.plot(gfs_times, 'r', label='gfs')
     ax1.plot(ard_times, 'b', label='ard')
-    ax1.set_xlabel('number of features')
+    ax1.set_xlabel('number of features (d)')
     ax1.set_ylabel('runtime')
     ax1.legend()
     plt.tight_layout()
